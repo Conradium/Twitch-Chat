@@ -1,11 +1,18 @@
 import concurrent.futures
 import time
+import os
+import requests
 import keyboard         # killswitch
 import TwitchChat
 
 
+# Remember to setup your Client_ID & Client_Secret & OAuth_Token in your environment variables if you want to get the User ID.
+CLIENT_ID = os.getenv('TWITCH_CLIENT_ID')
+CLIENT_SECRET = os.getenv('TWITCH_CLIENT_SECRET')
+oauth_token = os.getenv('TWITCH_OAUTH_TOKEN')
+    
 # Replace this with your Twitch username, if you have problems, try using the username in lowercase
-TWITCH_CHANNEL = 'AqusoriasYuki' 
+TWITCH_CHANNEL = 'otzdarva' 
 
 # The lower the message, the faster the messages are processed: it's the number of seconds it will take to handle all messages in the queue.
 # Twitch delivers messages in batches, if set to 0 it will process it instantly, that's pretty bad if you have many messages incoming.
@@ -37,14 +44,41 @@ t = TwitchChat.Twitch()
 t.twitch_connect(TWITCH_CHANNEL)
 
 
+def get_user_id(username, client_id, oauth_token):
+    url = 'https://api.twitch.tv/helix/users'
+    headers = {
+        'Client-ID': client_id,
+        'Authorization': f'Bearer {oauth_token}'
+    }
+    params = {
+        'login': username
+    }
+    try:
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        data = response.json()
+        if data['data']:
+            return data['data'][0]['id']
+        else:
+            return None
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching user ID for {username}: {e}")
+        return None
+    
+    
 # Remember that the Username is always lowercase (twitch standard).
 # It's better if you use the message at lowercase to avoid problems, but if neccecary, just remove the .lower().
 def handle_message(message):
     try:
         msg = message['message'].lower()
         username = message['username'].lower()
+        user_id = get_user_id(username, CLIENT_ID, oauth_token)
 
-        print(username + ": " + msg)
+        if user_id:
+            print(f"{username} ({user_id}): {msg}")
+        else:
+            print(f"{username} : {msg}")
+        
 
 ########################################## Add Rules ##########################################
 
