@@ -1,18 +1,21 @@
 import concurrent.futures
 import time
 import os
+from colorama import Fore, Back, Style, init
 import requests
 import keyboard         # killswitch
 import TwitchChat
+  
 
 
 # Remember to setup your Client_ID & Client_Secret & OAuth_Token in your environment variables if you want to get the User ID.
 CLIENT_ID = os.getenv('TWITCH_CLIENT_ID')
 CLIENT_SECRET = os.getenv('TWITCH_CLIENT_SECRET')
 oauth_token = os.getenv('TWITCH_OAUTH_TOKEN')
-    
+
+
 # Replace this with your Twitch username, if you have problems, try using the username in lowercase
-TWITCH_CHANNEL = 'otzdarva' 
+TWITCH_CHANNEL = 'LINK' 
 
 # The lower the message, the faster the messages are processed: it's the number of seconds it will take to handle all messages in the queue.
 # Twitch delivers messages in batches, if set to 0 it will process it instantly, that's pretty bad if you have many messages incoming.
@@ -28,17 +31,36 @@ MAX_WORKERS = 100
 
 
 
+
 last_time = time.time()
 message_queue = []
 thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS)
 active_tasks = []
+killswitch = False
+
+
+if CLIENT_ID == None or CLIENT_SECRET == None or oauth_token == None:
+    if CLIENT_ID == None:
+        print(Fore.RED + 'Client ID is missing in the environment variables.')
+    if CLIENT_SECRET == None:
+        print(Fore.RED + 'Client Secret is missing in the environment variables.')
+    if oauth_token == None:
+        print(Fore.RED + 'OAuth Token is missing in the environment variables.')
+    print(Fore.YELLOW + 'Please set the environment variables for the script to work properly. Remember that after setting up the environment variables, you need to restart VSCode (your editor).')
+    exit()
+
+
+init(autoreset=True)
+print(Fore.GREEN + 'Client ID: ' + Fore.BLUE + f'{CLIENT_ID}', Fore.GREEN + 'Client Secret: ' + Fore.BLUE + f'{CLIENT_SECRET}', Fore.GREEN + 'OAuth Token: ' + Fore.BLUE + f'{oauth_token}', sep='\n')
 
 # Countdown before the bot starts
 countdown = 2
+print(' ')
 while countdown > 0:
     print(countdown)
     countdown -= 1
     time.sleep(1)
+print(' ')
 
 t = TwitchChat.Twitch()
 t.twitch_connect(TWITCH_CHANNEL)
@@ -61,10 +83,10 @@ def get_user_id(username, client_id, oauth_token):
             return data['data'][0]['id']
         else:
             return None
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching user ID for {username}: {e}")
+    except requests.exceptions.RequestException as exception:
+        print(Fore.RED + f"Error fetching user ID for {username}: " + Fore.YELLOW + str(exception))
         return None
-    
+
     
 # Remember that the Username is always lowercase (twitch standard).
 # It's better if you use the message at lowercase to avoid problems, but if neccecary, just remove the .lower().
@@ -86,17 +108,17 @@ def handle_message(message):
 
 
         if msg == "hello":
-            print("User said Hello")
+            print(Fore.MAGENTA + "User said Hello")
             
         if msg == "goodbye":
-            print("User said Goodbye")
+            print(Fore.MAGENTA + "User said Goodbye")
 
 
 
 
 ########################################## <- Love you :3 -> ##########################################
-    except Exception as e:
-        print("Encountered exception: " + str(e))
+    except Exception as exception:
+        print(Fore.RED + "Encountered exception: " + Fore.YELLOW + str(exception))
 
 
 while True:
@@ -124,7 +146,12 @@ while True:
 
 
     # If User presses Shift+Backspace, automatically end the program - Killswitch
-    if keyboard.is_pressed('shift+backspace'):
+    if keyboard.is_pressed('shift+backspace') and not killswitch:
+        killswitch = True
+        
+        print(' ')
+        print('\033[1m' + Back.YELLOW + Fore.RED + 'Program ended by user' + '\033[0m')
+        print(' ')
         exit()
         
 
@@ -135,5 +162,5 @@ while True:
             if len(active_tasks) <= MAX_WORKERS:
                 active_tasks.append(thread_pool.submit(handle_message, message))
             else:
-                print(f'WARNING: active tasks ({len(active_tasks)}) exceeds number of workers ({MAX_WORKERS}). ({len(message_queue)} messages in the queue)')
+                print(Back.YELLOW + Fore.RED + Style.BRIGHT + f'WARNING: active tasks ({len(active_tasks)}) exceeds number of workers ({MAX_WORKERS}). ({len(message_queue)} messages in the queue)')
  
