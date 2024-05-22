@@ -1,6 +1,6 @@
 import socket
 import re
-from colorama import Fore, Back, init
+from colorama import Fore, init
 import random
 import time
 
@@ -15,7 +15,8 @@ class Twitch:
     login_timestamp = 0
 
     def twitch_connect(self, channel):
-        if self.sock: self.sock.close()
+        if self.sock: 
+            self.sock.close()
         self.sock = None
         self.partial = b''
         self.login_ok = False
